@@ -1,0 +1,178 @@
+# Honeypot Project .gitignore
+
+# ====================
+# Directories to Ignore
+# ====================
+
+# ELK Stack directory (contains running instances and data)
+elk/
+
+# OpenCTI directory (contains running instances and data)
+opencti/
+
+# ====================
+# Sensitive Files
+# ====================
+
+# Credentials file with passwords
+CREDENTIALS.txt
+**/CREDENTIALS.txt
+
+# Any file with credentials or secrets
+*credentials*
+*secrets*
+*.env
+.env.*
+
+# SSH keys and certificates
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+
+# WireGuard configs with private keys
+*.conf
+wireguard/
+
+# ====================
+# Docker Files to Ignore
+# ====================
+
+# Docker Compose override files (often contain local configs)
+docker-compose.override.yml
+docker-compose.*.override.yml
+
+# Docker volumes (if any are created locally)
+volumes/
+data/
+
+# ====================
+# Logs and Temporary Files
+# ====================
+
+# Log files
+*.log
+logs/
+var/log/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# ====================
+# Python (for future AI agents)
+# ====================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# ====================
+# Node.js (if using any JS tooling)
+# ====================
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ====================
+# IDE and Editor Files
+# ====================
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+# ====================
+# OS Files
+# ====================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# ====================
+# Project Specific
+# ====================
+
+# Downloaded malware samples (if any)
+malware/
+samples/
+*.exe
+*.dll
+*.bin
+
+# Database dumps
+*.sql
+*.dump
+
+# Archives that might contain sensitive data
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+
+# ====================
+# Keep These Files (Exceptions)
+# ====================
+
+# Keep template/example docker-compose files
+!docker-compose-elk.yml
+!docker-compose-opencti.yml
+
+# Keep configuration templates
+!logstash-config/
+!logstash-pipeline/
+!kibana-config/
+
+# Keep documentation
+!*.md
+!README.md
+!SETUP_INSTRUCTIONS.md
+
+# Keep setup scripts
+!setup.sh
+!*.sh
