@@ -128,6 +128,15 @@ NEXT STEPS:
 ===========================================
 EOF
 
+# Save tokens to .env file
+ENV_FILE="$BASE_DIR/.env"
+cat > "$ENV_FILE" << EOF
+OPENCTI_TOKEN=$OPENCTI_TOKEN
+CONNECTOR_ID=$CONNECTOR_ID
+EOF
+chmod 600 "$ENV_FILE"
+print_success "Tokens saved to $ENV_FILE"
+
 chmod 600 "$CREDS_FILE"
 print_success "Credentials saved to $CREDS_FILE"
 
@@ -174,7 +183,7 @@ echo "Setup Complete!"
 echo "=================================="
 echo ""
 echo "Project directory: $BASE_DIR"
-echo "Credentials file: $CREDS_FILE"
+echo "Configuration files and .env created."
 echo ""
 echo -e "${GREEN}Next steps:${NC}"
 echo "2. Start ELK Stack:"

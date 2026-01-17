@@ -40,7 +40,9 @@ wireguard/
 # Docker Files to Ignore
 # ====================
 
-# Docker Compose override files (often contain local configs)
+# Docker Compose files (contain sensitive info)
+docker-compose-elk.yml
+docker-compose-opencti.yml
 docker-compose.override.yml
 docker-compose.*.override.yml
 
@@ -159,9 +161,7 @@ samples/
 # Keep These Files (Exceptions)
 # ====================
 
-# Keep template/example docker-compose files
-!docker-compose-elk.yml
-!docker-compose-opencti.yml
+
 
 # Keep configuration templates
 !logstash-config/
