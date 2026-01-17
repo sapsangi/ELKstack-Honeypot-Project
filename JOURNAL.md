@@ -19,3 +19,4 @@
     - A separate docker command must be run with the elastic user to generate the service token
     - The service token must be generated after the container is running, and the kibana service must be started with the service token
     - does not seem to work even if token is generated and kibana is restarted with the token
+- Developing an overdependence on Anti Gravity lol
