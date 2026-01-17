@@ -1,0 +1,158 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7.2-alpine
+    container_name: opencti-redis
+    restart: always
+    volumes:
+      - redis-data:/data
+    networks:
+      - opencti
+
+  elasticsearch-opencti:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.3
+    container_name: opencti-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.ml.enabled=false
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+    restart: always
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - elasticsearch-opencti-data:/usr/share/elasticsearch/data
+    networks:
+      - opencti
+
+  minio:
+    image: minio/minio:latest
+    container_name: opencti-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: changeme123   # Change this password!
+    command: server /data --console-address ":9001"
+    restart: always
+    volumes:
+      - minio-data:/data
+    networks:
+      - opencti
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: opencti-rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=opencti
+      - RABBITMQ_DEFAULT_PASS=changeme123   # Change this password!
+      - RABBITMQ_NODENAME=rabbit01@localhost
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    restart: always
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - opencti
+
+  opencti:
+    image: opencti/platform:6.0.4
+    container_name: opencti-platform
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=8096
+      - APP__PORT=8080
+      - APP__BASE_URL=http://localhost:8080
+      - APP__ADMIN__EMAIL=admin@opencti.io
+      - APP__ADMIN__PASSWORD=changeme123   # Change this password!
+      - APP__ADMIN__TOKEN=${OPENCTI_TOKEN}  # Generated in .env
+      - APP__APP_LOGS__LOGS_LEVEL=error
+      - REDIS__HOSTNAME=redis
+      - REDIS__PORT=6379
+      - ELASTICSEARCH__URL=http://elasticsearch-opencti:9200
+      - MINIO__ENDPOINT=minio
+      - MINIO__PORT=9000
+      - MINIO__USE_SSL=false
+      - MINIO__ACCESS_KEY=admin
+      - MINIO__SECRET_KEY=changeme123   # Match MinIO password
+      - RABBITMQ__HOSTNAME=rabbitmq
+      - RABBITMQ__PORT=5672
+      - RABBITMQ__PORT_MANAGEMENT=15672
+      - RABBITMQ__MANAGEMENT_SSL=false
+      - RABBITMQ__USERNAME=opencti
+      - RABBITMQ__PASSWORD=changeme123   # Match RabbitMQ password
+      - SMTP__HOSTNAME=localhost
+      - SMTP__PORT=25
+      - PROVIDERS__LOCAL__STRATEGY=LocalStrategy
+    ports:
+      - "8080:8080"
+    restart: always
+    depends_on:
+      - redis
+      - elasticsearch-opencti
+      - minio
+      - rabbitmq
+    networks:
+      - opencti
+
+  worker:
+    image: opencti/worker:6.0.4
+    container_name: opencti-worker
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}  # Match platform token
+      - WORKER_LOG_LEVEL=info
+    restart: always
+    depends_on:
+      - opencti
+    deploy:
+      mode: replicated
+      replicas: 3
+    networks:
+      - opencti
+
+  connector-mitre:
+    image: opencti/connector-mitre:6.0.4
+    container_name: opencti-connector-mitre
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}  # Match platform token
+      - CONNECTOR_ID=${CONNECTOR_ID}  # Generated in .env
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=MITRE ATT&CK
+      - CONNECTOR_SCOPE=marking-definition,identity,attack-pattern,course-of-action,intrusion-set,campaign,malware,tool,report,external-reference-as-report
+      - CONNECTOR_CONFIDENCE_LEVEL=75
+      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_RUN_AND_TERMINATE=false
+      - CONNECTOR_LOG_LEVEL=info
+      - MITRE_ENTERPRISE_FILE_URL=https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json
+      - MITRE_MOBILE_ATTACK_FILE_URL=https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/mobile-attack/mobile-attack.json
+      - MITRE_ICS_ATTACK_FILE_URL=https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/ics-attack/ics-attack.json
+      - MITRE_INTERVAL=7 # In days
+    restart: always
+    depends_on:
+      - opencti
+    networks:
+      - opencti
+
+networks:
+  opencti:
+    driver: bridge
+
+volumes:
+  redis-data:
+  elasticsearch-opencti-data:
+  minio-data:
+  rabbitmq-data:

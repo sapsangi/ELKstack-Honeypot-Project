@@ -107,7 +107,19 @@ Before starting the services, you MUST change all default passwords in the docke
 
 #### ELK Stack (`docker-compose-elk.yml`):
 - `ELASTIC_PASSWORD`: Change `changeme123` to a strong password
-- Update this password in ALL services (elasticsearch, logstash, kibana)
+- **Important**: If your password contains a `$` character, you must escape it as `$$` (e.g. `my$password` becomes `my$$password`).
+- Update this password in ALL services (elasticsearch, logstash, kibana) UNLESS configured to use tokens.
+
+### Kibana Service Token (Required)
+Newer versions of Elasticsearch require a **service account token** for Kibana instead of a username/password.
+1. Start Elasticsearch only: `docker compose -f docker-compose-elk.yml up -d elasticsearch`
+2. Generate the token:
+   ```bash
+   sudo docker compose -f docker-compose-elk.yml exec elasticsearch bin/elasticsearch-service-tokens create elastic/kibana kibana-token
+   ```
+3. Update `docker-compose-elk.yml`:
+   - Remove `ELASTICSEARCH_USERNAME` and `ELASTICSEARCH_PASSWORD` from the `kibana` service.
+   - Add `ELASTICSEARCH_SERVICEACCOUNTTOKEN=<your_token>` to the environment variables.
 
 #### OpenCTI (`docker-compose-opencti.yml`):
 - `MINIO_ROOT_PASSWORD`: Change `changeme123`
@@ -117,14 +129,12 @@ Before starting the services, you MUST change all default passwords in the docke
 - `OPENCTI_TOKEN`: Use the same token as APP__ADMIN__TOKEN
 - `CONNECTOR_ID`: Generate unique IDs for each connector
 
-#### Generate secure passwords:
-```bash
-# Generate random passwords
-openssl rand -base64 24
+#### (.env) Environment Variables
+The `setup.sh` script automatically generates a `.env` file containing:
+- `OPENCTI_TOKEN`
+- `CONNECTOR_ID`
 
-# Generate UUIDs for tokens
-uuidgen
-```
+These are used by `docker-compose-opencti.yml`. You do not need to manually edit these unless you want to rotate tokens.
 
 ### System Configuration
 
@@ -148,12 +158,16 @@ uuidgen
 
 ### Step 1: Deploy ELK Stack
 
-1. **Navigate to ELK directory:**
+1. **Start Elasticsearch (if not already running):**
    ```bash
-   cd ~/honeypot-project/elk
+   docker compose -f docker-compose-elk.yml up -d elasticsearch
    ```
+   *Wait for it to become healthy.*
 
-2. **Start ELK Stack:**
+2. **Configure Kibana Token:**
+   (See "Kibana Service Token" section above if you haven't done this yet).
+
+3. **Start Full ELK Stack:**
    ```bash
    docker compose -f docker-compose-elk.yml up -d
    ```
@@ -185,12 +199,7 @@ uuidgen
 
 ### Step 2: Deploy OpenCTI
 
-1. **Navigate to OpenCTI directory:**
-   ```bash
-   cd ~/honeypot-project/opencti
-   ```
-
-2. **Start OpenCTI stack:**
+1. **Start OpenCTI stack:**
    ```bash
    docker compose -f docker-compose-opencti.yml up -d
    ```

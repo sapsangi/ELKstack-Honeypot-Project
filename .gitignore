@@ -41,8 +41,9 @@ wireguard/
 # ====================
 
 # Docker Compose files (contain sensitive info)
-docker-compose-elk.yml
-docker-compose-opencti.yml
+dock# Keep template/example docker-compose files
+!basic-docker-compose-elk.yml
+!basic-docker-compose-opencti.ymlncti.yml
 docker-compose.override.yml
 docker-compose.*.override.yml
 

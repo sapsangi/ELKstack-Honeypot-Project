@@ -156,18 +156,18 @@ echo "(Make sure you have the files in your current directory)"
 read -p "Copy files now? (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    if [ -f "docker-compose-elk.yml" ]; then
-        cp docker-compose-elk.yml "$BASE_DIR/elk/"
-        print_success "Copied docker-compose-elk.yml"
+    if [ -f "basic-docker-compose-elk.yml" ]; then
+        cp basic-docker-compose-elk.yml "$BASE_DIR/elk/docker-compose-elk.yml"
+        print_success "Copied basic-docker-compose-elk.yml to elk/docker-compose-elk.yml"
     else
-        print_warning "docker-compose-elk.yml not found in current directory"
+        print_warning "basic-docker-compose-elk.yml not found in current directory"
     fi
     
-    if [ -f "docker-compose-opencti.yml" ]; then
-        cp docker-compose-opencti.yml "$BASE_DIR/opencti/"
-        print_success "Copied docker-compose-opencti.yml"
+    if [ -f "basic-docker-compose-opencti.yml" ]; then
+        cp basic-docker-compose-opencti.yml "$BASE_DIR/opencti/docker-compose-opencti.yml"
+        print_success "Copied basic-docker-compose-opencti.yml to opencti/docker-compose-opencti.yml"
     else
-        print_warning "docker-compose-opencti.yml not found in current directory"
+        print_warning "basic-docker-compose-opencti.yml not found in current directory"
     fi
     
     # Copy config files if they exist
