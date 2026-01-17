@@ -74,27 +74,14 @@ else
     print_success "Disk space: ${AVAILABLE_SPACE}GB available"
 fi
 
-# Set vm.max_map_count for Elasticsearch
-echo ""
-echo "Configuring system for Elasticsearch..."
-CURRENT_MAP_COUNT=$(sysctl -n vm.max_map_count)
-if [ "$CURRENT_MAP_COUNT" -lt 262144 ]; then
-    echo "Setting vm.max_map_count=262144..."
-    sudo sysctl -w vm.max_map_count=262144
-    
-    # Make it permanent
-    if ! grep -q "vm.max_map_count" /etc/sysctl.conf; then
-        echo "vm.max_map_count=262144" | sudo tee -a /etc/sysctl.conf
-    fi
-    print_success "vm.max_map_count configured"
-else
-    print_success "vm.max_map_count already configured"
-fi
+# System verification complete
+print_success "System checks passed"
 
 # Create directory structure
 echo ""
 echo "Creating project directory structure..."
-BASE_DIR="$HOME/honeypot-project"
+echo "Creating project directory structure..."
+BASE_DIR="$(pwd)"
 
 mkdir -p "$BASE_DIR/elk/logstash/config"
 mkdir -p "$BASE_DIR/elk/logstash/pipeline"
@@ -103,13 +90,10 @@ mkdir -p "$BASE_DIR/opencti"
 
 print_success "Directory structure created at $BASE_DIR"
 
-# Generate secure passwords
+# Generate secure tokens
 echo ""
-echo "Generating secure passwords..."
-ELASTIC_PASS=$(openssl rand -base64 24)
-MINIO_PASS=$(openssl rand -base64 24)
-RABBITMQ_PASS=$(openssl rand -base64 24)
-OPENCTI_ADMIN_PASS=$(openssl rand -base64 24)
+echo "Generating secure tokens..."
+# Passwords will use defaults or be manually configured
 OPENCTI_TOKEN=$(uuidgen)
 CONNECTOR_ID=$(uuidgen)
 
@@ -125,32 +109,20 @@ Generated: $(date)
 
 ELK STACK:
 ----------
-Elasticsearch User: elastic
-Elasticsearch Password: $ELASTIC_PASS
 Kibana URL: http://localhost:5601
 
 OPENCTI:
 --------
 OpenCTI URL: http://localhost:8080
-OpenCTI Admin Email: admin@opencti.io
-OpenCTI Admin Password: $OPENCTI_ADMIN_PASS
 OpenCTI API Token: $OPENCTI_TOKEN
-
-MinIO Console: http://localhost:9001
-MinIO User: admin
-MinIO Password: $MINIO_PASS
-
-RabbitMQ Management: http://localhost:15672
-RabbitMQ User: opencti
-RabbitMQ Password: $RABBITMQ_PASS
 
 MITRE Connector ID: $CONNECTOR_ID
 
 ===========================================
 NEXT STEPS:
 1. Review and customize docker-compose files if needed
-2. Start ELK Stack: cd $BASE_DIR/elk && docker compose -f docker-compose-elk.yml up -d
-3. Start OpenCTI: cd $BASE_DIR/opencti && docker compose -f docker-compose-opencti.yml up -d
+2. Start ELK Stack: docker compose -f docker-compose-elk.yml up -d
+3. Start OpenCTI: docker compose -f docker-compose-opencti.yml up -d
 4. Access Kibana at http://localhost:5601
 5. Access OpenCTI at http://localhost:8080
 ===========================================
@@ -205,13 +177,10 @@ echo "Project directory: $BASE_DIR"
 echo "Credentials file: $CREDS_FILE"
 echo ""
 echo -e "${GREEN}Next steps:${NC}"
-echo "1. Update docker-compose files with generated passwords from CREDENTIALS.txt"
 echo "2. Start ELK Stack:"
-echo "   cd $BASE_DIR/elk"
 echo "   docker compose -f docker-compose-elk.yml up -d"
 echo ""
 echo "3. Start OpenCTI:"
-echo "   cd $BASE_DIR/opencti"
 echo "   docker compose -f docker-compose-opencti.yml up -d"
 echo ""
 echo "4. Monitor startup:"
