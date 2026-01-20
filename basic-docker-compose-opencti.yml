@@ -109,7 +109,7 @@ services:
 
   worker:
     image: opencti/worker:6.0.4
-    container_name: opencti-worker
+
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_TOKEN}  # Match platform token

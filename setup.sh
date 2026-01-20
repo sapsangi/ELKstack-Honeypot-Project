@@ -131,14 +131,23 @@ EOF
 # Save tokens to .env file
 ENV_FILE="$BASE_DIR/.env"
 cat > "$ENV_FILE" << EOF
+COMPOSE_PROJECT_NAME=honeypot
 OPENCTI_TOKEN=$OPENCTI_TOKEN
 CONNECTOR_ID=$CONNECTOR_ID
+KIBANA_SERVICE_TOKEN=
 EOF
 chmod 600 "$ENV_FILE"
 print_success "Tokens saved to $ENV_FILE"
 
 chmod 600 "$CREDS_FILE"
 print_success "Credentials saved to $CREDS_FILE"
+
+# Link .env to subdirectories to ensure variables are loaded
+echo ""
+echo "Linking .env to subdirectories..."
+ln -sf "$ENV_FILE" "$BASE_DIR/elk/.env"
+ln -sf "$ENV_FILE" "$BASE_DIR/opencti/.env"
+print_success "Linked .env to elk/ and opencti/ directories"
 
 echo ""
 print_warning "IMPORTANT: The configuration files still have default passwords!"
@@ -176,6 +185,85 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     [ -f "kibana.yml" ] && cp kibana.yml "$BASE_DIR/elk/kibana/config/" && print_success "Copied kibana.yml"
 fi
 
+# Ensure config files exist (to prevent Docker from creating directories)
+echo ""
+echo "Verifying configuration files..."
+
+ensure_file() {
+    local file_path="$1"
+    local default_content="$2"
+    
+    # If it's a directory, remove it (requires sudo if created by Docker)
+    if [ -d "$file_path" ]; then
+        print_warning "Found directory at $file_path where a file should be."
+        echo "Removing directory..."
+        sudo rm -rf "$file_path"
+    fi
+    
+    # If file doesn't exist, create it
+    if [ ! -f "$file_path" ]; then
+        print_warning "File $file_path not found. Creating default."
+        mkdir -p "$(dirname "$file_path")"
+        echo "$default_content" > "$file_path"
+        print_success "Created $file_path"
+    fi
+}
+
+ensure_file "$BASE_DIR/elk/kibana/config/kibana.yml" "server.host: \"0.0.0.0\""
+ensure_file "$BASE_DIR/elk/logstash/config/logstash.yml" "http.host: \"0.0.0.0\""
+ensure_file "$BASE_DIR/elk/logstash/pipeline/cowrie.conf" "# Placeholder pipeline"
+
+# Generate Kibana Service Token
+echo ""
+echo "Checking for ELK Docker Compose file..."
+if [ -f "$BASE_DIR/elk/docker-compose-elk.yml" ]; then
+    echo "Would you like to automatically generate the Kibana Service Token?"
+    echo "This requires starting the Elasticsearch container temporarily."
+    read -p "Generate token now? (y/n) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo "Starting Elasticsearch..."
+        sudo docker compose -f "$BASE_DIR/elk/docker-compose-elk.yml" up -d elasticsearch
+        
+        echo "Waiting for Elasticsearch to become healthy (this may take a minute)..."
+        RETRIES=60
+        while [ $RETRIES -gt 0 ]; do
+             if [ -n "$(sudo docker ps --quiet --filter "name=elasticsearch" --filter "health=healthy")" ]; then
+                break
+             fi
+             echo -n "."
+             sleep 2
+             RETRIES=$((RETRIES-1))
+        done
+        echo ""
+        
+        if [ $RETRIES -eq 0 ]; then
+            print_error "Elasticsearch failed to become healthy."
+            echo "Check logs with: sudo docker compose -f elk/docker-compose-elk.yml logs elasticsearch"
+        else
+            print_success "Elasticsearch is healthy."
+            echo "Generating service token..."
+            # Delete existing if any to avoid error
+            sudo docker compose -f "$BASE_DIR/elk/docker-compose-elk.yml" exec elasticsearch /usr/share/elasticsearch/bin/elasticsearch-service-tokens delete elastic/kibana kibana-token &>/dev/null || true
+            
+            TOKEN_OUTPUT=$(sudo docker compose -f "$BASE_DIR/elk/docker-compose-elk.yml" exec elasticsearch /usr/share/elasticsearch/bin/elasticsearch-service-tokens create elastic/kibana kibana-token | cut -d '=' -f 2 | tr -d ' ')
+            
+            if [ ! -z "$TOKEN_OUTPUT" ]; then
+                if grep -q "KIBANA_SERVICE_TOKEN" "$ENV_FILE"; then
+                    sed -i "s|KIBANA_SERVICE_TOKEN=.*|KIBANA_SERVICE_TOKEN=$TOKEN_OUTPUT|" "$ENV_FILE"
+                else
+                    echo "KIBANA_SERVICE_TOKEN=$TOKEN_OUTPUT" >> "$ENV_FILE"
+                fi
+                print_success "Kibana Service Token generated and saved to .env"
+            else
+                print_error "Failed to generate token."
+            fi
+        fi
+    fi
+else
+    print_warning "ELK Docker Compose file not found. Skipping token generation."
+fi
+
 # Summary
 echo ""
 echo "=================================="
@@ -187,13 +275,13 @@ echo "Configuration files and .env created."
 echo ""
 echo -e "${GREEN}Next steps:${NC}"
 echo "2. Start ELK Stack:"
-echo "   docker compose -f docker-compose-elk.yml up -d"
+echo "   sudo docker compose -f docker-compose-elk.yml up -d"
 echo ""
 echo "3. Start OpenCTI:"
-echo "   docker compose -f docker-compose-opencti.yml up -d"
+echo "   sudo docker compose -f docker-compose-opencti.yml up -d"
 echo ""
 echo "4. Monitor startup:"
-echo "   docker compose logs -f"
+echo "   sudo docker compose logs -f"
 echo ""
 echo "For detailed instructions, see SETUP_INSTRUCTIONS.md"
 echo ""
