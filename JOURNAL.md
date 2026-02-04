@@ -39,3 +39,22 @@
 ### 🧗 Hurdles
 - The disconnect between `setup.sh` (run from root) and manual commands (run from `elk/`) caused Elasticsearch to be recreated, invalidating the service token. Fixed by enforcing a single project name.
 - Docker kept creating directories instead of files for missing configs; fixed by implementing a "ensure file exists" check in the setup script.
+
+## Day 3: 2026-02-03
+
+### ✅ Resolved
+- Implemented `deploy_remote.sh` to offload ELK and OpenCTI compute to a remote NAS via SSH while maintaining local control.
+- Added interactive setup to storing NAS credentials and IP safely in `.env`.
+- Configured SSH tunneling to mapped ports (5601, 8080) so services running on NAS are accessible via `localhost`.
+- Updated `SETUP_INSTRUCTIONS.md` to offer both Local and Remote deployment options.
+
+### 🚧 Unresolved
+- Verifying the OpenCTI connection to ELK stack
+- Verifying the NAS workings
+- Honeypot implementation and Wireguard pipeline setup
+- Most things just need to be tested still ... oops
+
+### 🧗 Hurdles
+- Initial plan to use `docker context` with bind mounts failed because volumes map to the *remote* filesystem paths, not local.
+    - **Fix**: Refactored `deploy_remote.sh` to sync config files to the NAS first using `rsync`, then execute `docker compose` directly on the NAS via SSH commands.
+
